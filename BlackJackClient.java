@@ -11,7 +11,14 @@ import javax.swing.*;
 public class BlackJackClient extends JApplet
                              implements Runnable {
    private JTextField id;
-   private JTextArea display;
+   private JTextArea chatbox;
+   
+   private JPanel infoPanel;
+   private JTextArea handinfo;
+   private JTextArea statsinfo;
+   
+   private JPanel inputPanel;
+   //input buttons, fields go here
    
    private Socket connection;
    private DataInputStream input;
@@ -24,16 +31,46 @@ public class BlackJackClient extends JApplet
    // Set up user-interface and board
    public void init()
    {
-      display = new JTextArea( 20, 30 );
-      display.setEditable( false );
-      getContentPane().add( new JScrollPane( display ),
-                            BorderLayout.SOUTH );
+      //messages from chat, server, game updates
+      chatbox = new JTextArea( 20, 30 );
+      chatbox.setEditable( false );
+      getContentPane().add( new JScrollPane( chatbox ),
+                            BorderLayout.WEST );
+                       
+      infoPanel = new JPanel();
+      //current players + their hands + server's up card
+      handinfo = new JTextArea( 20, 22 );
+      handinfo.setEditable(false);
+      infoPanel.add(new JScrollPane(handinfo),
+                           BorderLayout.NORTH);
+      //stats readout for stats request
+      statsinfo = new JTextArea( 20, 8);
+      statsinfo.setEditable(false);
+      infoPanel.add(statsinfo,
+                     BorderLayout.SOUTH);
 
+      //panel with all inputs
+      inputPanel = new JPanel();
+      inputPanel.setLayout(new GridBagLayout());
+      //add a bunch of inputs here:
+         //hit button
+         //stand button
+         //quit button
+         //chat field + button
+         //stats field (for username statted) + button
+            //might use JComboBox...
+         //play again button (for when game's over)
+         //observe button (same, but for not being dealt in)
+      
+      getContentPane().add(inputPanel,
+                           BorderLayout.SOUTH);
+
+      //player username
+      //arguably ought to remove this?
       id = new JTextField();
       id.setEditable( false );
       
-      players = new String[6];
-      players[0] = "your name here";
+      id.setText("your username");
       
       getContentPane().add( id, BorderLayout.NORTH );
       
@@ -105,8 +142,12 @@ public class BlackJackClient extends JApplet
       //else ...
       
       if(s.contains("chat: ")) {
-         //Remove the "chat: " part and add to chatbox
-         display.append(s.substring(6));
+         //Remove the "chat: " part and add to the chatbox
+         chatbox.append(s.substring(6));
+      }
+      if(s.contains("stats: ")) {
+         //IMO we can just dump stats in the chatbox too
+         chatbox.append(s.substring(7));
       }
       if(s.contains("Your turn")){
     	  try {
@@ -114,12 +155,11 @@ public class BlackJackClient extends JApplet
               } catch(InterruptedException ex) {
                   Thread.currentThread().interrupt();
               }
-		   display.append("Would you like to hit?\n");
-		   display.append("Other options here.....\n");
+		   chatbox.append("It's your turn. Hit or stand?\n");
 	   }
 
-      display.setCaretPosition(
-         display.getText().length() );
+      chatbox.setCaretPosition(
+         chatbox.getText().length() );
    }
    
    public void hitMe()
@@ -148,16 +188,25 @@ public class BlackJackClient extends JApplet
    
    public void chat(String message)
    {
-         try {
-            //Do not add username here (modded client could spoof it)
-            //Server does it instead
-            output.writeUTF("chat: " + message);
-         }
-         catch ( IOException ie ) {
-            ie.printStackTrace();         
-         }
+      try {
+         //Do not add username here (modded client could spoof it)
+         //Server does it instead
+         output.writeUTF("chat: " + message);
+      }
+      catch ( IOException ie ) {
+         ie.printStackTrace();         
+      }
    }
    
+   public void stats(String username)
+   {
+      try {
+         output.writeUTF("stats: " + username);
+      }
+      catch ( IOException ie ) {
+         ie.printStackTrace();         
+      }
+   }
 }
 
 // Event Listeners for buttons
@@ -211,7 +260,7 @@ class StatsListener extends MouseAdapter {
     }
 
     public void mouseReleased( MouseEvent e ) {
-        applet.chat(statsField.getText());
+        applet.stats(statsField.getText());
         //Do not clear the statsField
         //The user may want to re-examine just one user's stats often
     }
