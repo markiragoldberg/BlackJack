@@ -5,7 +5,6 @@ import java.awt.event.*;
 import java.net.*;
 import java.io.*;
 import javax.swing.*;
-import java.lang.*;
 
 // Client class to let a user play Tic-Tac-Toe with
 // another user across a network.
@@ -13,14 +12,14 @@ public class BlackJackClient extends JApplet
                              implements Runnable {
    private JTextField id;
    private JTextArea display;
-   private JPanel boardPanel, panel2;
-   private Square board[][], currentSquare;
+   
    private Socket connection;
    private DataInputStream input;
    private DataOutputStream output;
    private Thread outputThread;
-   private char myMark;
+   
    private boolean myTurn;
+   private String[] players;
 
    // Set up user-interface and board
    public void init()
@@ -30,39 +29,14 @@ public class BlackJackClient extends JApplet
       getContentPane().add( new JScrollPane( display ),
                             BorderLayout.SOUTH );
 
-      boardPanel = new JPanel();
-      GridLayout layout = new GridLayout( 3, 3, 0, 0 );
-      boardPanel.setLayout( layout );
-
-      board = new Square[ 3 ][ 3 ];
-
-      // When creating a Square, the location argument to the
-      // constructor is a value from 0 to 8 indicating the
-      // position of the Square on the board. Values 0, 1,
-      // and 2 are the first row, values 3, 4, and 5 are the
-      // second row. Values 6, 7, and 8 are the third row.
-      for ( int row = 0; row < board.length; row++ )
-      {
-         for ( int col = 0;
-                   col < board[ row ].length; col++ ) {
-            board[ row ][ col ] =
-               new Square( ' ', row * 3 + col );
-            board[ row ][ col ].addMouseListener(
-               new SquareListener(
-                  this, board[ row ][ col ] ) );
-
-            boardPanel.add( board[ row ][ col ] );        
-         }
-      }
-
       id = new JTextField();
       id.setEditable( false );
       
+      players = new String[6];
+      players[0] = "your name here";
+      
       getContentPane().add( id, BorderLayout.NORTH );
       
-      panel2 = new JPanel();
-      panel2.add( boardPanel, BorderLayout.CENTER );
-      getContentPane().add( panel2, BorderLayout.CENTER );
       setSize(500,500);
    }
 
@@ -90,17 +64,10 @@ public class BlackJackClient extends JApplet
    // Control thread that allows continuous update of the
    // text area display.
    public void run()
-   {
-      // First get player's mark (X or O)
-      try {
-    	  //The race condition sets myMark to the wrong value
-         myMark = input.readChar();
-         id.setText( "You are player \"" + myMark + "\"" );
-         myTurn = ( myMark == 'X' ? true  : false );
-      }
-      catch ( IOException e ) {
-         e.printStackTrace();         
-      }
+   {      
+      id.setText("No username yet");
+
+      //Talk to Brian about this exception-to-game-over thing...
 
       // Receive messages sent to client
       boolean tryToRead = true;
@@ -115,6 +82,7 @@ public class BlackJackClient extends JApplet
             } catch(InterruptedException ex) {
                 Thread.currentThread().interrupt();
             }
+            
             System.err.println("Game Over!");
             tryToRead = false;
             System.exit(0);
@@ -127,38 +95,19 @@ public class BlackJackClient extends JApplet
    {
 	   //Put the steps in here for blackjack game flow
 	   
-	   
-	   
-	   
-      if ( s.equals( "Valid move." ) ) {
-         display.append( "Valid move, please wait.\n" );
-         currentSquare.setMark( myMark );
-         currentSquare.repaint();
-      }
-      else if ( s.equals( "Invalid move, try again" ) ) {
-         display.append( s + "\n" );
-         myTurn = true;
-      }
-      else if ( s.equals( "Opponent moved" ) ) {
-         try {
-            int loc = input.readInt();
- 
-            board[ loc / 3 ][ loc % 3 ].setMark(
-                  ( myMark == 'X' ? 'O' : 'X' ) );
-            board[ loc / 3 ][ loc % 3 ].repaint();
-                 
-            display.append(
-               "Opponent moved. Your turn.\n" );
-            myTurn = true;
-         }
-         catch ( IOException e ) {
-            e.printStackTrace();         
-         }
-      }
-      else
-         display.append(s);
+      //Need a common communication protocol with the Server
+      //Snoop in the server file and see if Brian wrote something
       
-      //OUT OR ORDER!!
+	   //if server sent "this"
+         //then update client with "this"
+      //else if server sent "that"
+         //then update client with "that"
+      //else ...
+      
+      if(s.contains("chat: ")) {
+         //Remove the "chat: " part and add to chatbox
+         display.append(s.substring(6));
+      }
       if(s.contains("Your turn")){
     	  try {
               Thread.sleep(5000);                 //1000 milliseconds is one second.
@@ -172,74 +121,100 @@ public class BlackJackClient extends JApplet
       display.setCaretPosition(
          display.getText().length() );
    }
-
-   public void sendClickedSquare( int loc )
+   
+   public void hitMe()
    {
-      if ( myTurn )
+      if( myTurn )
          try {
-            output.writeInt( loc );
+            output.writeUTF("turn: hitme");
             myTurn = false;
          }
          catch ( IOException ie ) {
             ie.printStackTrace();         
          }
    }
-
-   public void setCurrentSquare( Square s )
+   
+   public void stand()
    {
-      currentSquare = s;
+      if( myTurn )
+         try {
+            output.writeUTF("turn: stand");
+            myTurn = false;
+         }
+         catch ( IOException ie ) {
+            ie.printStackTrace();         
+         }
    }
+   
+   public void chat(String message)
+   {
+         try {
+            //Do not add username here (modded client could spoof it)
+            //Server does it instead
+            output.writeUTF("chat: " + message);
+         }
+         catch ( IOException ie ) {
+            ie.printStackTrace();         
+         }
+   }
+   
 }
 
-// Maintains one square on the board
-class Square extends JPanel {
-   private char mark;
-   private int location;
+// Event Listeners for buttons
 
-   public Square( char m, int loc)
-   {
-      mark = m;
-      location = loc;
-      setSize ( 30, 30 );
-      
-      setVisible(true);
-   }
+class HitMeListener extends MouseAdapter {
+    private BlackJackClient applet;
+    
+    public HitMeListener( BlackJackClient t) {
+        applet = t;
+    }
 
-   public Dimension getPreferredSize() { 
-      return ( new Dimension( 30, 30 ) );
-   }
-
-   public Dimension getMinimumSize() {
-      return ( getPreferredSize() );
-   }
-
-   public void setMark( char c ) { mark = c; }
-
-   public int getSquareLocation() { return location; }
-
-   public void paintComponent( Graphics g )
-   {
-      super.paintComponent( g );
-      g.drawRect( 0, 0, 29, 29 );
-      g.drawString( String.valueOf( mark ), 11, 20 );   
-   }
+    public void mouseReleased( MouseEvent e ) {
+        applet.hitMe();
+    }
 }
 
-class SquareListener extends MouseAdapter {
-   private BlackJackClient applet;
-   private Square square;
+class StandListener extends MouseAdapter {
+    private BlackJackClient applet;
+    
+    public StandListener( BlackJackClient t) {
+        applet = t;
+    }
 
-   public SquareListener( BlackJackClient t, Square s )
-   {
-      applet = t;
-      square = s;
-   }
+    public void mouseReleased( MouseEvent e ) {
+        applet.stand();
+    }
+}
 
-   public void mouseReleased( MouseEvent e )
-   {
-      applet.setCurrentSquare( square );
-      applet.sendClickedSquare( square.getSquareLocation() );
-   }
+class SendChatListener extends MouseAdapter {
+    private BlackJackClient applet;
+    private JTextField chatField;
+    
+    public SendChatListener( BlackJackClient t, JTextField chatField) {
+        applet = t;
+        this.chatField = chatField;
+    }
+
+    public void mouseReleased( MouseEvent e ) {
+        applet.chat(chatField.getText());
+        chatField.setText("");
+    }
+}
+
+class StatsListener extends MouseAdapter {
+    private BlackJackClient applet;
+    private JTextField statsField;
+    
+    public StatsListener( BlackJackClient t, JTextField statsField) {
+        applet = t;
+        this.statsField = statsField;
+    }
+
+    public void mouseReleased( MouseEvent e ) {
+        applet.chat(statsField.getText());
+        //Do not clear the statsField
+        //The user may want to re-examine just one user's stats often
+    }
 }
 
 /**************************************************************************
