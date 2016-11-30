@@ -37,13 +37,13 @@ public class BlackJackServer extends JFrame {
       }
 
       output = new JTextArea();
-      getContentPane().add( output, BorderLayout.CENTER );
+      getContentPane().add(new JScrollPane(output), BorderLayout.CENTER );
       output.setText( "Server awaiting connections\n" );
       output.append("The deck has been created and shuffled for this game...\n");
       output.append(deck.getDeck().toString());
 
       setSize( 500, 1000 );
-      show();
+      setVisible(true);
    }
    
    public void incrementIndex(){
