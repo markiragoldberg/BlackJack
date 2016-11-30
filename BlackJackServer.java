@@ -16,6 +16,8 @@ public class BlackJackServer extends JFrame {
    private ServerSocket server;
    private int currentPlayer;
    public int deckIndex = 0;
+   public int serverHandIndex = 0;
+   public java.util.ArrayList<Card> serverHand = new java.util.ArrayList<Card>();
    DeckofCards deck = new DeckofCards();
 
    public BlackJackServer()
@@ -40,17 +42,17 @@ public class BlackJackServer extends JFrame {
       getContentPane().add(new JScrollPane(output), BorderLayout.CENTER );
       output.setText( "Server awaiting connections\n" );
       output.append("The deck has been created and shuffled for this game...\n");
-      output.append(deck.getDeck().toString());
+      output.append(deck.getDeck().toString() + "\n");
 
       setSize( 500, 1000 );
       setVisible(true);
    }
    
-   public void incrementIndex(){
+   public synchronized void incrementIndex(){
 	   deckIndex = deckIndex + 1;
    }
    
-   public int getDeckIndex(){
+   public synchronized int getDeckIndex(){
 	   return deckIndex;
    }
 
@@ -75,7 +77,40 @@ public class BlackJackServer extends JFrame {
          players[ 0 ].threadSuspended = false;   
          players[ 0 ].notify();
       }
-  
+      
+      try {
+          Thread.sleep(10000);                 //1000 milliseconds is one second.
+          } catch(InterruptedException ex) {
+              Thread.currentThread().interrupt();
+          }
+      
+      serverHand.add(deck.cards.get(getDeckIndex()));
+      String card = serverHand.get(serverHandIndex).toString();
+      display("Server received card: " + card + "\n");
+      incrementIndex();
+      serverHandIndex += 1;
+      
+      serverHand.add(deck.cards.get(getDeckIndex()));
+      card = serverHand.get(serverHandIndex).toString();
+      display("Server received card: " + card + "\n");
+      incrementIndex();
+      serverHandIndex += 1;
+      
+      
+   }
+   
+   
+   public String displayHand(){
+	   String theHand = "";
+	   
+	   for(int i = 0; i < serverHand.size(); i++){
+           Card card = serverHand.get(i);
+           if(i == serverHand.size() - 1){
+		   theHand += card.getValue();
+           }
+           else {theHand += card.getValue() + ", ";}
+	   }
+	   return theHand;
    }
    
    public void display( String s )
@@ -147,14 +182,7 @@ public class BlackJackServer extends JFrame {
    public String gameOver()
    {
       // Place code here to test for a winner of the game
-      if((board[0] == 'X' && board[1] == 'X' && board[2] == 'X') || (board[0] == 'O' && board[1] == 'O' && board[2] == 'O') 
-      || (board[3] == 'X' && board[4] == 'X' && board[5] == 'X')   || (board[3] == 'O' && board[4] == 'O' && board[5] == 'O')
-      || (board[6] == 'X' && board[7] == 'X' && board[8] == 'X')   || (board[6] == 'O' && board[7] == 'O' && board[8] == 'O')
-      || (board[0] == 'X' && board[3] == 'X' && board[6] == 'X')   || (board[0] == 'O' && board[3] == 'O' && board[6] == 'O')
-      || (board[1] == 'X' && board[4] == 'X' && board[7] == 'X')   || (board[1] == 'O' && board[4] == 'O' && board[7] == 'O')
-      || (board[2] == 'X' && board[5] == 'X' && board[8] == 'X')   || (board[2] == 'O' && board[5] == 'O' && board[8] == 'O')
-      || (board[0] == 'X' && board[4] == 'X' && board[8] == 'X')   || (board[0] == 'O' && board[4] == 'O' && board[8] == 'O')
-      || (board[2] == 'X' && board[4] == 'X' && board[6] == 'X')   || (board[2] == 'O' && board[4] == 'O' && board[6] == 'O')){
+      if(false){
           display("Gameover, player " + currentPlayer + " won!");
       return "Gameover!";
       }else return "";
@@ -183,6 +211,7 @@ class Player extends Thread {
    private DataInputStream input;
    public DataOutputStream output;
    private BlackJackServer control;
+   int handValue = 0;
    private int number;
    private char mark;
    protected boolean threadSuspended = true;
@@ -219,7 +248,7 @@ class Player extends Thread {
    public void otherPlayerMoved( int loc )
    {
       try {
-         output.writeUTF( "Opponent moved" );
+         output.writeUTF( "Opponent moved\n" );
          output.writeInt( loc );
       }
       catch ( IOException e ) { e.printStackTrace(); }
@@ -232,6 +261,9 @@ class Player extends Thread {
       try {
          control.display( "Player " +
             ( number == 0 ? 'X' : 'O' ) + " connected" );
+         if(number == 0){
+        	 control.display("Waiting for other player to connect...");
+         }
          output.writeChar( mark );
          output.writeUTF( "Player " +
             ( number == 0 ? "X connected\n" :
@@ -239,7 +271,7 @@ class Player extends Thread {
 
          // wait for another player to arrive
          if ( mark == 'X' ) {
-            output.writeUTF( "Waiting for another player" );
+            output.writeUTF( "Waiting for another player\n" );
 
             try {
                synchronized( this ) {   
@@ -252,23 +284,37 @@ class Player extends Thread {
             }
 
             output.writeUTF(
-               "Other player connected. Your turn." );
+               "Other player connected. Your turn.\n" );
             
          }
          
          //RACE CONDITION NEEDS TO BE FIXED
          try {
-             Thread.sleep(2000);                 //1000 milliseconds is one second.
+             Thread.sleep(5000);                 //1000 milliseconds is one second.
              } catch(InterruptedException ex) {
                  Thread.currentThread().interrupt();
              }
-         output.writeUTF( "You have been dealt cards..." );
+         output.writeUTF( "You have been dealt cards...\n" );
          String card = hand.get(playerHandIndex - 2).toString();
-         output.writeUTF("Card: " + card);
-         control.sendMessageToOtherPlayer("The other player received card: " + card, number);
+         output.writeUTF("Card: " + card + "\n");
+         getValueOfCard(hand.get(playerHandIndex - 2));
+         output.writeUTF("Your hand value is: " + handValue + "\n");
+         control.sendMessageToOtherPlayer("The other player received card: " + card + "\n", number);
+         control.display("Player: " + mark + " received card: " + card + "\n");
+         control.display("Player " + mark + " hand value is " + Integer.toString(handValue));
+         control.sendMessageToOtherPlayer("Player " + mark + " hand value is " + Integer.toString(handValue) + "\n", number);
          card = hand.get(playerHandIndex - 1).toString();
-         output.writeUTF("Card: " + card);
-         control.sendMessageToOtherPlayer("The other player received card: " + card, number);
+         output.writeUTF("Card: " + card + "\n");
+         getValueOfCard(hand.get(playerHandIndex - 1));
+         output.writeUTF("Your hand value is: " + handValue + "\n");
+         output.writeUTF("Your full hand is: " + displayHand() + "\n");
+         control.display("Player: " + mark + " received card: " + card + "\n");
+         control.display("Player " + mark + " hand value is " + Integer.toString(handValue));
+         control.display("Player " + mark + " complete hand is " + displayHand() + "\n");
+         control.sendMessageToOtherPlayer("The other player received card: " + card + "\n", number);
+         control.sendMessageToOtherPlayer("Player " + mark + " hand value is " + Integer.toString(handValue) + "\n", number);
+         control.sendMessageToOtherPlayer("Player " + mark + " complete hand is " + displayHand() + "\n", number);
+         
          
          // Play game
          while ( !done ) {
@@ -276,15 +322,15 @@ class Player extends Thread {
             
             if ( control.validMove( location, number ) ) {
                control.display( "loc: " + location );
-               output.writeUTF( "Valid move." );
+               output.writeUTF( "Valid move.\n" );
             }
             else 
-               output.writeUTF( "Invalid move, try again" );
+               output.writeUTF( "Invalid move, try again\n" );
 
             if ( control.gameOver().equals("Gameover!") )
                done = true;
          }         
-         output.writeUTF( "Gameover, you win!" );
+         output.writeUTF( "Gameover, you win!\n" );
          control.alertOtherPlayerGameOver();
          connection.close();
       }
@@ -293,21 +339,50 @@ class Player extends Thread {
          System.exit( 1 );
       }
    }
+   
+   public int getValueOfCard(Card card){
+	   
+	   switch(card.getValue()){
+	   case "2": handValue += 2;
+	   break;
+	   case "3": handValue += 3;
+	   break;
+	   case "4": handValue += 4;
+	   break;
+	   case "5": handValue += 5;
+	   break;
+	   case "6": handValue += 6;
+	   break;
+	   case "7": handValue += 7;
+	   break;
+	   case "8": handValue += 8;
+	   break;
+	   case "9": handValue += 9;
+	   break;
+	   case "10": handValue += 10;
+	   break;
+	   case "A": handValue += 1;
+	   break;
+	   case "Jack": handValue += 10;
+	   break;
+	   case "Queen": handValue += 10;
+	   break;
+	   case "King": handValue += 10;
+	   break;
+	   }
+	   return handValue;
+   }
+   
+   public String displayHand(){
+	   String theHand = "";
+	   
+	   for(int i = 0; i < hand.size(); i++){
+           Card card = hand.get(i);
+           if(i == hand.size() - 1){
+		   theHand += card.getValue();
+           }
+           else {theHand += card.getValue() + ", ";}
+	   }
+	   return theHand;
+   }
 }                                                            
-
-
-
-/**************************************************************************
- * (C) Copyright 1999 by Deitel & Associates, Inc. and Prentice Hall.     *
- * All Rights Reserved.                                                   *
- *                                                                        *
- * DISCLAIMER: The authors and publisher of this book have used their     *
- * best efforts in preparing the book. These efforts include the          *
- * development, research, and testing of the theories and programs        *
- * to determine their effectiveness. The authors and publisher make       *
- * no warranty of any kind, expressed or implied, with regard to these    *
- * programs or to the documentation contained in these books. The authors *
- * and publisher shall not be liable in any event for incidental or       *
- * consequential damages in connection with, or arising out of, the       *
- * furnishing, performance, or use of these programs.                     *
- *************************************************************************/
