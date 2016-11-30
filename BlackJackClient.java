@@ -10,6 +10,13 @@ import javax.swing.*;
 // another user across a network.
 public class BlackJackClient extends JApplet
                              implements Runnable {
+   //enormous load of UI stuff
+   //login page stuff
+   private JTextField loginField;
+   private JPasswordField passwordField;
+   private JButton loginButton;
+   
+   // game page stuff
    private JTextField id;
    private JTextArea chatbox;
    
@@ -18,49 +25,119 @@ public class BlackJackClient extends JApplet
    private JTextArea statsinfo;
    
    private JPanel inputPanel;
-   //input buttons, fields go here
+   
+   private JPanel inputTopRow;
+   private JButton hitMeButton;
+   private JButton standButton;
+   private JTextField statsField;
+   private JButton statsButton;
+   
+   private JPanel inputCenterRow;
+   private JTextField chatField;
+   private JButton chatButton;
+   
+   private JPanel inputBottomRow;
+   private JButton quitButton;
+   private JButton playAgainButton;
+   
+   //Networking stuff
    
    private Socket connection;
    private DataInputStream input;
    private DataOutputStream output;
    private Thread outputThread;
+   private boolean loggedIn;
+   
+   //Game logic stuff
    
    private boolean myTurn;
    private String[] players;
-
-   // Set up user-interface and board
+   
    public void init()
    {
+      loggedIn = false;
+      
+      loginField = new JTextField("Enter username...", 20);
+      passwordField = new JPasswordField(20);
+      loginButton = new JButton("Login");
+      loginButton.addMouseListener(
+        new LoginListener(this, loginField, passwordField));
+      
+      getContentPane().add(loginField, BorderLayout.WEST);
+      getContentPane().add(passwordField, BorderLayout.EAST);
+      getContentPane().add(loginButton, BorderLayout.SOUTH);
+      
+      setSize(300, 200);
+   }
+
+   // Set up user-interface and board
+   public void login(String username)
+   {
+      //get rid of the login screen stuff
+      getContentPane().removeAll();
+      
       //messages from chat, server, game updates
-      chatbox = new JTextArea( 20, 30 );
+      chatbox = new JTextArea();
       chatbox.setEditable( false );
       getContentPane().add( new JScrollPane( chatbox ),
-                            BorderLayout.WEST );
+                            BorderLayout.CENTER );
                        
       infoPanel = new JPanel();
+      infoPanel.setLayout(new BorderLayout());
       //current players + their hands + server's up card
-      handinfo = new JTextArea( 20, 22 );
+      handinfo = new JTextArea();
       handinfo.setEditable(false);
       infoPanel.add(new JScrollPane(handinfo),
-                           BorderLayout.NORTH);
+                           BorderLayout.CENTER);
       //stats readout for stats request
-      statsinfo = new JTextArea( 20, 8);
+      statsinfo = new JTextArea( 8, 25);
       statsinfo.setEditable(false);
       infoPanel.add(statsinfo,
                      BorderLayout.SOUTH);
+      getContentPane().add(new JScrollPane(infoPanel),
+                           BorderLayout.EAST);
 
       //panel with all inputs
       inputPanel = new JPanel();
-      inputPanel.setLayout(new GridBagLayout());
-      //add a bunch of inputs here:
-         //hit button
-         //stand button
-         //quit button
-         //chat field + button
-         //stats field (for username statted) + button
-            //might use JComboBox...
-         //play again button (for when game's over)
-         //observe button (same, but for not being dealt in)
+      inputPanel.setLayout(new BorderLayout());
+      
+      inputTopRow = new JPanel();
+      hitMeButton = new JButton("Hit Me");
+      hitMeButton.addMouseListener(
+        new HitMeListener(this));
+      inputTopRow.add(hitMeButton);
+      standButton = new JButton("Stand");
+      standButton.addMouseListener(
+        new StandListener(this));
+      inputTopRow.add(standButton);
+      statsField = new JTextField("Enter username...", 20);
+      inputTopRow.add(statsField);
+      statsButton = new JButton("Get Stats");
+      standButton.addMouseListener(
+        new StatsListener(this, statsField));
+      inputTopRow.add(statsButton);
+      inputPanel.add(inputTopRow, BorderLayout.NORTH);
+      
+      inputCenterRow = new JPanel();
+      chatField = new JTextField("Say something...", 35);
+      inputCenterRow.add(chatField);
+      chatButton = new JButton("Chat");
+      chatButton.addMouseListener(
+        new ChatListener(this, chatField));
+      inputCenterRow.add(chatButton);
+      inputPanel.add(inputCenterRow, BorderLayout.CENTER);
+      
+      inputBottomRow = new JPanel();
+      quitButton = new JButton("Quit");
+      quitButton.addMouseListener(
+        new QuitListener(this));
+      inputBottomRow.add(quitButton);
+      playAgainButton = new JButton("Play Again");
+      playAgainButton.addMouseListener(
+        new PlayAgainListener(this));
+      playAgainButton.setEnabled(false);
+      inputBottomRow.add(playAgainButton);
+      inputPanel.add(inputBottomRow, BorderLayout.SOUTH);
       
       getContentPane().add(inputPanel,
                            BorderLayout.SOUTH);
@@ -70,11 +147,15 @@ public class BlackJackClient extends JApplet
       id = new JTextField();
       id.setEditable( false );
       
-      id.setText("your username");
+      id.setText(username);
       
       getContentPane().add( id, BorderLayout.NORTH );
       
-      setSize(500,500);
+      setSize(800, 600);
+      getContentPane().revalidate();
+      getContentPane().repaint();
+      
+      loggedIn = true;
    }
 
    // Make connection to server and get associated streams.
@@ -101,14 +182,12 @@ public class BlackJackClient extends JApplet
    // Control thread that allows continuous update of the
    // text area display.
    public void run()
-   {      
-      id.setText("No username yet");
-
+   {
       //Talk to Brian about this exception-to-game-over thing...
 
       // Receive messages sent to client
       boolean tryToRead = true;
-      while ( tryToRead ) {
+      while ( true ) {
          try {
             String s = input.readUTF();
             processMessage( s );
@@ -130,17 +209,19 @@ public class BlackJackClient extends JApplet
    // Process messages sent to client
    public void processMessage( String s )
    {
-	   //Put the steps in here for blackjack game flow
-	   
-      //Need a common communication protocol with the Server
-      //Snoop in the server file and see if Brian wrote something
-      
-	   //if server sent "this"
-         //then update client with "this"
-      //else if server sent "that"
-         //then update client with "that"
-      //else ...
-      
+      System.out.println("process");
+      if(s.contains("loggedin: ")) {
+         System.err.println("got login msg");
+         if(!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(new Runnable() {
+               public void run() {
+                  login(s.substring(10));
+               }
+            });
+         } else {
+            login(s.substring(10));
+         }
+      }
       if(s.contains("chat: ")) {
          //Remove the "chat: " part and add to the chatbox
          chatbox.append(s.substring(6));
@@ -207,6 +288,17 @@ public class BlackJackClient extends JApplet
          ie.printStackTrace();         
       }
    }
+   
+   public void attemptToLogin()
+   {
+      try {
+         output.writeUTF("loginpw: " + 
+            loginField.getText() + 
+            new String(passwordField.getPassword()));
+      } catch (IOException ie) {
+         ie.printStackTrace();
+      }
+   }
 }
 
 // Event Listeners for buttons
@@ -235,11 +327,11 @@ class StandListener extends MouseAdapter {
     }
 }
 
-class SendChatListener extends MouseAdapter {
+class ChatListener extends MouseAdapter {
     private BlackJackClient applet;
     private JTextField chatField;
     
-    public SendChatListener( BlackJackClient t, JTextField chatField) {
+    public ChatListener( BlackJackClient t, JTextField chatField) {
         applet = t;
         this.chatField = chatField;
     }
@@ -264,6 +356,57 @@ class StatsListener extends MouseAdapter {
         //Do not clear the statsField
         //The user may want to re-examine just one user's stats often
     }
+}
+
+class PlayAgainListener extends MouseAdapter {
+    private BlackJackClient applet;
+    
+    public PlayAgainListener( BlackJackClient t) {
+        applet = t;
+    }
+
+    public void mouseReleased( MouseEvent e ) {
+        //tell server you want to play again...
+    }
+}
+
+class QuitListener extends MouseAdapter {
+    private BlackJackClient applet;
+    
+    public QuitListener(BlackJackClient t) {
+        applet = t;
+    }
+
+    public void mouseReleased( MouseEvent e ) {
+         //TODO: Tell the server you're quitting
+         System.exit(0);
+    }
+}
+
+class LoginListener extends MouseAdapter {
+   private BlackJackClient applet;
+   private JTextField loginField;
+   private JPasswordField passwordField;
+   
+   public LoginListener(BlackJackClient t, 
+         JTextField loginField, JPasswordField passwordField) {
+      applet = t;
+      this.loginField = loginField;
+      this.passwordField = passwordField;
+   }
+
+   public void mouseReleased( MouseEvent e ) {
+      // attempt to log in...
+      
+      //send login & pw to server...
+      //run() should get login confirm from server...
+      //run() should invokeAndWait() on login()...
+    
+    //  applet.attemptToLogin();
+    
+    //TODO remove this call, doesn't belong here
+    applet.login("DEBUG");
+   }
 }
 
 /**************************************************************************
