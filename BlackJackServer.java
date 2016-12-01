@@ -300,9 +300,11 @@ public class BlackJackServer extends JFrame {
                   sendMessageToOtherPlayers("Player " + Integer.toString(p+1) + " pushed.\n", p);
                }
             }
-            //player busted
-            players[p].output.writeUTF("You lost...\n");
-            sendMessageToOtherPlayers("Player " + Integer.toString(p+1) + " lost...\n", p);
+            else {
+               //player busted
+               players[p].output.writeUTF("You lost...\n");
+               sendMessageToOtherPlayers("Player " + Integer.toString(p+1) + " lost...\n", p);
+            }
          }
       } catch (IOException ie) {
          ie.printStackTrace();

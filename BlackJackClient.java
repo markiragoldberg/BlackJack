@@ -223,7 +223,7 @@ public class BlackJackClient extends JApplet
       }
       if(s.contains("chat: ")) {
          //Remove the "chat: " part and add to the chatbox
-         handinfo.append(s.substring(6));
+         handinfo.append(s.substring(6) + "\n");
       }
       if(s.contains("stats: ")) {
          //IMO we can just dump stats in the chatbox too
