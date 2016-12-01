@@ -17,7 +17,6 @@ public class BlackJackServer extends JFrame {
    private int currentPlayer;
    public int deckIndex = 0;
    public int serverHandIndex = 0;
-   public int handValue;
    public java.util.ArrayList<Card> serverHand = new java.util.ArrayList<Card>();
    DeckofCards deck = new DeckofCards();
 
@@ -104,8 +103,9 @@ public class BlackJackServer extends JFrame {
       sendMessageToOtherPlayer("The servers hand is: " + displayHand() + "\n", 1);
       getValueOfCard(serverHand.get(serverHandIndex - 2));
       getValueOfCard(serverHand.get(serverHandIndex - 1));
-      sendMessageToOtherPlayer("The servers hand value is: " + handValue + "\n", 0);
-      sendMessageToOtherPlayer("The servers hand value is: " + handValue + "\n", 1);
+      sendMessageToOtherPlayer("The servers hand value is: " + getValueOfHand(serverHand) + "\n", 0);
+      sendMessageToOtherPlayer("The servers hand value is: " + getValueOfHand(serverHand) + "\n", 1);
+      display("The servers hand value is: " + getValueOfHand(serverHand) + "\n");
       
    }
    
@@ -123,38 +123,41 @@ public class BlackJackServer extends JFrame {
 	   return theHand;
    }
    
-public int getValueOfCard(Card card){
+   
+ public int getValueOfCard(Card card){
 	   
 	   switch(card.getValue()){
-	   case "2": handValue += 2;
-	   break;
-	   case "3": handValue += 3;
-	   break;
-	   case "4": handValue += 4;
-	   break;
-	   case "5": handValue += 5;
-	   break;
-	   case "6": handValue += 6;
-	   break;
-	   case "7": handValue += 7;
-	   break;
-	   case "8": handValue += 8;
-	   break;
-	   case "9": handValue += 9;
-	   break;
-	   case "10": handValue += 10;
-	   break;
-	   case "A": handValue += 1;
-	   break;
-	   case "Jack": handValue += 10;
-	   break;
-	   case "Queen": handValue += 10;
-	   break;
-	   case "King": handValue += 10;
-	   break;
+	   case "2": return 2;
+	   case "3": return 3;
+	   case "4": return 4;
+	   case "5": return 5;
+	   case "6": return 6;
+	   case "7": return 7;
+	   case "8": return 8;
+	   case "9": return 9;
+	   case "10": return 10;
+	   case "A": return 1;
+	   case "Jack": return 10;
+	   case "Queen": return 10;
+	   case "King": return 10;
 	   }
-	   return handValue;
+	   return 0;
    }
+
+	public int getValueOfHand(java.util.ArrayList<Card> hand) {
+	    int value = 0;
+	    int ace = 0;
+	    for(int i = 0; i < hand.size(); ++i) {
+	       value += getValueOfCard(hand.get(i));
+	       if(getValueOfCard(hand.get(i)) == 1) {
+	          ace++;
+	       }
+	    }
+	    if(value < 12 && ace > 0) {
+	       value += 10;
+	    }
+	    return value;
+	 }
    
    public void display( String s )
    {
@@ -254,7 +257,6 @@ class Player extends Thread {
    private DataInputStream input;
    public DataOutputStream output;
    private BlackJackServer control;
-   int handValue = 0;
    private int number;
    private String mark;
    protected boolean threadSuspended = true;
@@ -340,21 +342,21 @@ class Player extends Thread {
          String card = hand.get(playerHandIndex - 2).toString();
          output.writeUTF("Card: " + card + "\n");
          getValueOfCard(hand.get(playerHandIndex - 2));
-         output.writeUTF("Your hand value is: " + handValue + "\n");
+         output.writeUTF("Your hand value is: " + getValueOfHand(hand) + "\n");
          control.sendMessageToOtherPlayer("The other player received card: " + card + "\n", number);
          control.display("Player: " + mark + " received card: " + card + "\n");
-         control.display("Player " + mark + " hand value is " + Integer.toString(handValue));
-         control.sendMessageToOtherPlayer("Player " + mark + " hand value is " + Integer.toString(handValue) + "\n", number);
+         control.display("Player " + mark + " hand value is " + getValueOfHand(hand));
+         control.sendMessageToOtherPlayer("Player " + mark + " hand value is " + getValueOfHand(hand) + "\n", number);
          card = hand.get(playerHandIndex - 1).toString();
          output.writeUTF("Card: " + card + "\n");
          getValueOfCard(hand.get(playerHandIndex - 1));
-         output.writeUTF("Your hand value is: " + handValue + "\n");
+         output.writeUTF("Your hand value is: " + getValueOfHand(hand) + "\n");
          output.writeUTF("Your full hand is: " + displayHand() + "\n");
          control.display("Player: " + mark + " received card: " + card + "\n");
-         control.display("Player " + mark + " hand value is " + Integer.toString(handValue));
+         control.display("Player " + mark + " hand value is " + getValueOfHand(hand));
          control.display("Player " + mark + " complete hand is " + displayHand() + "\n");
          control.sendMessageToOtherPlayer("The other player received card: " + card + "\n", number);
-         control.sendMessageToOtherPlayer("Player " + mark + " hand value is " + Integer.toString(handValue) + "\n", number);
+         control.sendMessageToOtherPlayer("Player " + mark + " hand value is " + getValueOfHand(hand) + "\n", number);
          control.sendMessageToOtherPlayer("Player " + mark + " complete hand is " + displayHand() + "\n", number);
          
          
@@ -401,34 +403,21 @@ class Player extends Thread {
    public int getValueOfCard(Card card){
 	   
 	   switch(card.getValue()){
-	   case "2": handValue += 2;
-	   break;
-	   case "3": handValue += 3;
-	   break;
-	   case "4": handValue += 4;
-	   break;
-	   case "5": handValue += 5;
-	   break;
-	   case "6": handValue += 6;
-	   break;
-	   case "7": handValue += 7;
-	   break;
-	   case "8": handValue += 8;
-	   break;
-	   case "9": handValue += 9;
-	   break;
-	   case "10": handValue += 10;
-	   break;
-	   case "A": handValue += 1;
-	   break;
-	   case "Jack": handValue += 10;
-	   break;
-	   case "Queen": handValue += 10;
-	   break;
-	   case "King": handValue += 10;
-	   break;
+	   case "2": return 2;
+	   case "3": return 3;
+	   case "4": return 4;
+	   case "5": return 5;
+	   case "6": return 6;
+	   case "7": return 7;
+	   case "8": return 8;
+	   case "9": return 9;
+	   case "10": return 10;
+	   case "A": return 1;
+	   case "Jack": return 10;
+	   case "Queen": return 10;
+	   case "King": return 10;
 	   }
-	   return handValue;
+	   return 0;
    }
    
    public String displayHand(){
