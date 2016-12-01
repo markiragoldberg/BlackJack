@@ -383,6 +383,21 @@ class Player extends Thread {
       }
    }
    
+   public int getValueOfHand(java.util.ArrayList<Card> hand) {
+      int value = 0;
+      int ace = 0;
+      for(int i = 0; i < hand.size(); ++i) {
+         value += getValueOfCard(hand.get(i));
+         if(getValueOfCard(hand.get(i)) == 1) {
+            ace++;
+         }
+      }
+      if(value < 12 && ace > 0) {
+         value += 10;
+      }
+      return value;
+   }
+   
    public int getValueOfCard(Card card){
 	   
 	   switch(card.getValue()){
