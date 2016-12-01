@@ -199,8 +199,6 @@ public class BlackJackClient extends JApplet
             } catch(InterruptedException ex) {
                 Thread.currentThread().interrupt();
             }
-            
-            System.err.println("Game Over!");
             tryToRead = false;
             System.exit(0);
          }
