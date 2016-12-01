@@ -49,7 +49,8 @@ public class BlackJackClient extends JApplet
    private boolean loggedIn;
    
    //Game logic stuff
-   private String[] players;
+   private java.util.ArrayList<java.util.ArrayList<Card>> hands;
+   int newCardOwner;
    
    public void init()
    {
@@ -67,6 +68,13 @@ public class BlackJackClient extends JApplet
       
       //TODO implement logging in
       login("Welcome to BlackJack!");
+      
+      hands = new java.util.ArrayList<java.util.ArrayList<Card>>();
+      //TODO currently hardcoded to server + 3 players
+      for(int p = 0; p < 4; ++p) {
+         hands.add(new java.util.ArrayList<Card>());
+      }
+      newCardOwner = -1;
       
       setSize(800, 600);
    }
@@ -93,7 +101,7 @@ public class BlackJackClient extends JApplet
       //stats readout for stats request
       statsinfo = new JTextArea( 8, 25);
       statsinfo.setEditable(false);
-      infoPanel.add(statsinfo,
+      infoPanel.add(new JScrollPane(statsinfo),
                      BorderLayout.SOUTH);
       getContentPane().add(new JScrollPane(infoPanel),
                            BorderLayout.EAST);
@@ -111,16 +119,17 @@ public class BlackJackClient extends JApplet
       standButton.addMouseListener(
         new StandListener(this));
       inputTopRow.add(standButton);
-      statsField = new JTextField("Enter username...", 20);
+      statsField = new JTextField("", 20);
       inputTopRow.add(statsField);
       statsButton = new JButton("Get Stats");
       standButton.addMouseListener(
         new StatsListener(this, statsField));
+      statsButton.setEnabled(false);
       inputTopRow.add(statsButton);
       inputPanel.add(inputTopRow, BorderLayout.NORTH);
       
       inputCenterRow = new JPanel();
-      chatField = new JTextField("Say something...", 35);
+      chatField = new JTextField("  ", 35);
       inputCenterRow.add(chatField);
       chatButton = new JButton("Chat");
       chatButton.addMouseListener(
@@ -222,9 +231,22 @@ public class BlackJackClient extends JApplet
             login(s.substring(10));
          }
       }
+      else if(s.contains("newcard: ")) {
+         newCardOwner = Integer.parseInt(s.substring(9));
+         hands.get(newCardOwner).add(new Card());
+      }
+      else if(s.contains("newvalue: ")) {
+         java.util.ArrayList<Card> hand = hands.get(newCardOwner);
+         hand.get(hand.size()-1).setValue(s.substring(10));
+      }
+      else if(s.contains("newsuit: ")) {
+         java.util.ArrayList<Card> hand = hands.get(newCardOwner);
+         hand.get(hand.size()-1).setSuit(s.substring(9));
+         updateHandInfo();
+      }
       else if(s.contains("chat: ")) {
          //Remove the "chat: " part and add to the chatbox
-         handinfo.append(s.substring(6) + "\n");
+         statsinfo.append(s.substring(6) + "\n");
       }
       else if(s.contains("stats: ")) {
          //IMO we can just dump stats in the chatbox too
@@ -244,6 +266,31 @@ public class BlackJackClient extends JApplet
 
       chatbox.setCaretPosition(
          chatbox.getText().length() );
+   }
+   
+   public void updateHandInfo() {
+      String update = "";
+      
+      
+      //Players' hands
+      for(int p = 0; p < 3; ++p) {
+         if(!hands.get(p).isEmpty()) {
+            update += "Player " + Integer.toString(p + 1) + "'s hand:\n";
+            for(Card c : hands.get(p+1)) {
+               update += c + "\n";
+            }
+         }
+      }
+      
+      //Server hand
+      if(!hands.get(0).isEmpty()) {
+         update += "Server's hand:\n";
+         for(Card c : hands.get(0)) {
+            update += c + "\n";
+         }
+      }
+      
+      handinfo.setText(update);
    }
    
    public void hitMe()
