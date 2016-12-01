@@ -23,6 +23,7 @@ public class Card {
                 this.value = value;
         }
        
+       @Override
         public String toString(){
                 return "\n"+value + " of "+ suit;
         }
