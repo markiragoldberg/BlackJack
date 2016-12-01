@@ -262,6 +262,8 @@ class Player extends Thread {
    protected boolean threadSuspended = true;
    public int playerHandIndex = 0;
    public java.util.ArrayList<Card> hand = new java.util.ArrayList<Card>();
+   public boolean playerTurn = false;
+   
 
    public Player( Socket s, BlackJackServer t, int num )
    {
@@ -363,14 +365,18 @@ class Player extends Thread {
          
          // Play game
          while ( !done ) {
-            int location = input.readInt();
+            String message = input.readUTF();
             
-            if ( control.validMove( location, number ) ) {
-               control.display( "loc: " + location );
-               output.writeUTF( "Valid move.\n" );
+            if(message.contains("hitme")){
+            	
+            }else if(message.contains("stand")){
+            	
+            }else if(message.contains("chat:")){
+            	message = message.substring(6);
+            }else if(message.contains("stats:")){
+            	message = message.substring(7);
             }
-            else 
-               output.writeUTF( "Invalid move, try again\n" );
+            
 
             if ( control.gameOver().equals("Gameover!") )
                done = true;
