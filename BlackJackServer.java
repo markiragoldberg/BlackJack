@@ -67,16 +67,14 @@ public class BlackJackServer extends JFrame {
             System.exit( 1 );
          }
       }
-
-      /*
-      // Player X is suspended until Player O connects.
-      // Resume player X now.
-      for(int p = 0; p < players.length-2; p++) {
-         synchronized ( players[ 0 ] ) {
-            players[ 0 ].threadSuspended = false;   
-            players[ 0 ].notify();
-         }
-      }*/
+      
+      try {
+         Thread.sleep(3000);
+      }
+      catch (InterruptedException e) {
+         e.printStackTrace();
+         System.exit(1);
+      }
       
       
       //Server should deal out the cards here!
@@ -183,15 +181,20 @@ public class BlackJackServer extends JFrame {
       //if player busted, remove from set of unfinished players
       //regardless, get next player or end game if the last one finished
       if(getValueOfHand(players[currentPlayer].hand) > 21) {
-         //TODO: THIS ISN'T THE RIGHT INDEX ?
-         if(playersNotDone.size() <= 1) {
+         playersNotDone.set(pNdIndex, -1);
+         boolean allDone = true;
+         for(int p : playersNotDone) {
+            if(p != -1) {
+               allDone = false;
+            }
+         }
+         if(allDone) {
             endGame();
          }
          else {
-            currentPlayer = playersNotDone.get(
-               (pNdIndex + 1) % playersNotDone.size()
-               );
-            playersNotDone.remove(pNdIndex);
+            do {
+               currentPlayer = playersNotDone.get( ((++pNdIndex) % playersNotDone.size()) );
+            } while(currentPlayer == -1);
             try {
                display("Player " + Integer.toString(currentPlayer + 1) + " has the turn\n");
                players[currentPlayer].output.writeUTF("It's your turn. Hit or stand?\n");
@@ -201,8 +204,9 @@ public class BlackJackServer extends JFrame {
          }
       }
       else {
-         currentPlayer = 
-            playersNotDone.get(pNdIndex + 1) % playersNotDone.size();
+            do {
+               currentPlayer = playersNotDone.get( ((++pNdIndex) % playersNotDone.size()) );
+            } while(currentPlayer == -1);
          try {
             display("Player " + Integer.toString(currentPlayer + 1) + " has the turn\n");
             players[currentPlayer].output.writeUTF("It's your turn. Hit or stand?\n");
@@ -225,11 +229,21 @@ public class BlackJackServer extends JFrame {
                break;
             }
          }
-         
-         currentPlayer = playersNotDone.get(
-            (pNdIndex + 1) % playersNotDone.size()
-            );
-         playersNotDone.remove(pNdIndex);
+         playersNotDone.set(pNdIndex, -1);
+         boolean allDone = true;
+         for(int p : playersNotDone) {
+            if(p != -1) {
+               allDone = false;
+            }
+         }
+         if(allDone) {
+            endGame();
+         }
+         else {
+            do {
+               currentPlayer = playersNotDone.get( ((++pNdIndex) % playersNotDone.size()) );
+            } while(currentPlayer == -1);
+         }
          try {
             display("Player " + Integer.toString(currentPlayer + 1) + " has the turn\n");
             players[currentPlayer].output.writeUTF("It's your turn. Hit or stand?\n");
@@ -501,7 +515,7 @@ class Player extends Thread {
             	control.playerStood();
             }else if(message.contains("chat:")){
             	message = message.substring(6);
-               control.sendMessageToAllPlayers(message);
+               control.sendMessageToAllPlayers("chat: " + "Player " + Integer.toString(number + 1) + ": " + message);
             }else if(message.contains("stats:")){
                //TODO: do stats, no stats yet
             	//message = message.substring(7);

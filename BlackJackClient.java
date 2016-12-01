@@ -210,7 +210,6 @@ public class BlackJackClient extends JApplet
    // Process messages sent to client
    public void processMessage( String s )
    {
-      chatbox.append(s);
       if(s.contains("loggedin: ")) {
          if(!SwingUtilities.isEventDispatchThread()) {
             SwingUtilities.invokeLater(new Runnable() {
@@ -224,7 +223,7 @@ public class BlackJackClient extends JApplet
       }
       if(s.contains("chat: ")) {
          //Remove the "chat: " part and add to the chatbox
-         chatbox.append(s.substring(6));
+         handinfo.append(s.substring(6));
       }
       if(s.contains("stats: ")) {
          //IMO we can just dump stats in the chatbox too
@@ -238,6 +237,9 @@ public class BlackJackClient extends JApplet
               }
 		   chatbox.append("It's your turn. Hit or stand?\n");
 	   }
+      else {
+         chatbox.append(s);
+      }
 
       chatbox.setCaretPosition(
          chatbox.getText().length() );
