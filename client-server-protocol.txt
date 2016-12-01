@@ -1,5 +1,12 @@
-CLIENT SAYS
+CLIENT SAYS:
 
 turn: hitme
+   Use string.contains("hitme")
 turn: stand
+   Use string.contains("stand")
 chat: <chat message>
+   Use string.substring(6) to get the chat message
+stats: <username>
+   Use string.substring(7) to get the username
+loginpw: <login> <password>
+   Probably shouldn't use this at all tbqh.
