@@ -70,7 +70,7 @@ public class BlackJackClient extends JApplet
       //TODO implement logging in
       login("Welcome to BlackJack!");
       
-      setSize(300, 200);
+      setSize(800, 600);
    }
 
    // Set up user-interface and board
