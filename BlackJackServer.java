@@ -16,6 +16,7 @@ public class BlackJackServer extends JFrame {
    public int deckIndex = 0;
    public int serverHandIndex = 0;
    public java.util.ArrayList<Card> serverHand = new java.util.ArrayList<Card>();
+   public java.util.ArrayList<Integer> playersNotDone;
    DeckofCards deck = new DeckofCards();
 
    public BlackJackServer()
@@ -23,7 +24,7 @@ public class BlackJackServer extends JFrame {
       super( "BlackJack Server" );
 
       players = new Player[ 3 ];
-      currentPlayer = 0;
+      currentPlayer = -1;
  
       // set up ServerSocket
       try {
@@ -38,7 +39,7 @@ public class BlackJackServer extends JFrame {
       getContentPane().add(new JScrollPane(output), BorderLayout.CENTER );
       output.setText( "Server awaiting connections\n" );
       output.append("The deck has been created and shuffled for this game...\n");
-      output.append(deck.getDeck().toString() + "\n");
+     // output.append(deck.getDeck().toString() + "\n");
 
       setSize( 500, 1000 );
       setVisible(true);
@@ -118,11 +119,20 @@ public class BlackJackServer extends JFrame {
       sendMessageToAllPlayers("The servers hand value is: " + getValueOfHand(serverHand) + "\n");
       display("The servers hand value is: " + getValueOfHand(serverHand) + "\n");
       
-      java.util.ArrayList<Integer> playersNotDone = new java.util.ArrayList<Integer>();
+      playersNotDone = new java.util.ArrayList<Integer>();
       for( int i = 0; i < players.length; ++i) {
          playersNotDone.add(i);
       }
       
+      currentPlayer = 0;
+      try {
+         players[currentPlayer].output.writeUTF("It's your turn. Hit or stand?\n");
+      } catch (Exception e) {
+         e.printStackTrace();
+      }
+   }
+      
+      /*    this actually goes in the playerthread
       int i = 0;
       while(!playersNotDone.isEmpty()) {
          //give the player a turn
@@ -133,35 +143,105 @@ public class BlackJackServer extends JFrame {
          } catch (Exception e) {
             e.printStackTrace();
          }
+      */
+   
+   //give current player a card
+   //bust them if appropriate
+   //transfer turn to next player and alert them
+   public synchronized void playerHit() {
+      players[currentPlayer].hand.add(deck.cards.get(getDeckIndex()));
+      //transitions deck to the next top card
+      incrementIndex();
+      try {
+         players[currentPlayer].output.writeUTF( "You have been dealt:\n" );
+         players[currentPlayer].output.writeUTF(
+            "Card: " + players[currentPlayer].hand.get(players[currentPlayer].hand.size()-1) + "\n");
+         players[currentPlayer].output.writeUTF(
+            "Your hand value is: " + getValueOfHand(players[currentPlayer].hand) + "\n");
+      } catch (Exception e) {
+         e.printStackTrace();
+      }
       
-         //have server wait for the input
-         
-         
-         //if player hit
-         if(true) {
-            players[p].hand.add(deck.cards.get(getDeckIndex()));
-            incrementIndex();
-            //if player busted, remove from set of unfinished players
+      //Get index of player[currentPlayer] in playersNotDone
+      int pNdIndex = 0;
+      for(pNdIndex = 0; pNdIndex < playersNotDone.size(); ++pNdIndex) {
+         if(playersNotDone.get(pNdIndex) == currentPlayer) {
+            break;
+         }
+      }
+      
+      //Cases to cover:
+      //1 player left, player busted
+         //ignore currentplayer; endGame
+      //2+ players left, player busted
+         //remove player, set currentPlayer to remaining player
+      //1 player left, player didn't bust
+         //set currentPlayer to remaining player
+      //2+ players left, player didn't bust
+         //set currentPlayer to remaining player
+      
+      //if player busted, remove from set of unfinished players
+      //regardless, get next player or end game if the last one finished
+      if(getValueOfHand(players[currentPlayer].hand) > 21) {
+         //TODO: THIS ISN'T THE RIGHT INDEX ?
+         if(playersNotDone.size() <= 1) {
+            endGame();
+         }
+         else {
+            currentPlayer = playersNotDone.get(
+               (pNdIndex + 1) % playersNotDone.size()
+               );
+            playersNotDone.remove(pNdIndex);
             try {
-               players[p].output.writeUTF( "You have been dealt:\n" );
-               players[p].output.writeUTF("Card: " + players[p].hand.get(players[p].hand.size()-1) + "\n");
-               players[p].output.writeUTF("Your hand value is: " + getValueOfHand(players[p].hand) + "\n");
+               display("Player " + Integer.toString(currentPlayer + 1) + " has the turn\n");
+               players[currentPlayer].output.writeUTF("It's your turn. Hit or stand?\n");
             } catch (Exception e) {
                e.printStackTrace();
             }
          }
-         
-         //player stood or busted, remove them
-         if(getValueOfHand(players[p].hand) > 21) { // OR IF PLAYER STOOD
-            playersNotDone.remove(i);
-         }
-         
-         //get next player in queue
-         if(!playersNotDone.isEmpty()) {
-            i = (i + 1) % playersNotDone.size();
+      }
+      else {
+         currentPlayer = 
+            playersNotDone.get(pNdIndex + 1) % playersNotDone.size();
+         try {
+            display("Player " + Integer.toString(currentPlayer + 1) + " has the turn\n");
+            players[currentPlayer].output.writeUTF("It's your turn. Hit or stand?\n");
+         } catch (Exception e) {
+            e.printStackTrace();
          }
       }
-      
+   }
+   
+   public synchronized void playerStood() {
+      sendMessageToAllPlayers("Player " + Integer.toString(currentPlayer + 1) + " stood.\n");
+      if(playersNotDone.size() <= 1) {
+         endGame();
+      }
+      else {
+         //Get index of player[currentPlayer] in playersNotDone
+         int pNdIndex = 0;
+         for(pNdIndex = 0; pNdIndex < playersNotDone.size(); ++pNdIndex) {
+            if(playersNotDone.get(pNdIndex) == currentPlayer) {
+               break;
+            }
+         }
+         
+         currentPlayer = playersNotDone.get(
+            (pNdIndex + 1) % playersNotDone.size()
+            );
+         playersNotDone.remove(pNdIndex);
+         try {
+            display("Player " + Integer.toString(currentPlayer + 1) + " has the turn\n");
+            players[currentPlayer].output.writeUTF("It's your turn. Hit or stand?\n");
+         } catch (Exception e) {
+            e.printStackTrace();
+         }
+      }
+   }
+   
+   public synchronized void endGame() {
+      // All players have stood or busted
+      // If at least one player stood, server takes cards
       boolean allPlayersBusted = true;
       for(Player p : players) {
          if(getValueOfHand(p.hand) <= 21) {
@@ -169,34 +249,29 @@ public class BlackJackServer extends JFrame {
             break;
          }
       }
-      
       if(!allPlayersBusted) {
-         sendMessageToAllPlayers("\nServer now drawing to 17 or bust");
-         while(getValueOfHand(serverHand) < 17) {
-            serverHand.add(deck.cards.get(getDeckIndex()));
-            String card = serverHand.get(serverHandIndex).toString();
-            display("Server received card: " + card + "\n");
-            sendMessageToAllPlayers("Server received card: " + card + "\n");
-            incrementIndex();
-            serverHandIndex += 1;
+            sendMessageToAllPlayers("\nServer now drawing to 17 or bust");
+            while(getValueOfHand(serverHand) < 17) {
+               serverHand.add(deck.cards.get(getDeckIndex()));
+               String card = serverHand.get(serverHandIndex).toString();
+               display("Server received card: " + card + "\n");
+               sendMessageToAllPlayers("Server received card: " + card + "\n");
+               incrementIndex();
+               serverHandIndex += 1;
+            }
+         sendMessageToAllPlayers("The servers hand is: " + displayHand() + "\n");
+         sendMessageToAllPlayers("The servers hand value is: " + getValueOfHand(serverHand) + "\n");
+         display("The servers hand value is: " + getValueOfHand(serverHand) + "\n");
+         if(getValueOfHand(serverHand) > 21) {
+            sendMessageToAllPlayers("The server went bust!\n");
+            display("The server went bust!\n");
          }
-      }
-      sendMessageToAllPlayers("The servers hand is: " + displayHand() + "\n");
-      sendMessageToAllPlayers("The servers hand value is: " + getValueOfHand(serverHand) + "\n");
-      display("The servers hand value is: " + getValueOfHand(serverHand) + "\n");
-      if(getValueOfHand(serverHand) > 21) {
-         sendMessageToAllPlayers("The server went bust!\n");
-         display("The server went bust!\n");
       }
       else {
          display("Everyone busted so the server doesn't draw\n");
       }
       
-      
-      //game loop:
-      // server goes through all players repeatedly until all stood or busted
-      //server draws to 17 or bust
-      //server determines winners and losers and outputs them      
+      //Go through all players and tell everyone who won, pushed, and lost
       try {
          for(int p = 0; p < players.length; ++p) {
             if(getValueOfHand(players[p].hand) <= 21) {
@@ -269,6 +344,10 @@ public class BlackJackServer extends JFrame {
 	    }
 	    return value;
 	 }
+    
+    public synchronized int getCurrentPlayer() {
+       return currentPlayer;
+    }
    
    public void display( String s )
    {
@@ -341,7 +420,6 @@ class Player extends Thread {
    private BlackJackServer control;
    private int number;
    private String mark;
-   protected boolean threadSuspended = true;
    public java.util.ArrayList<Card> hand = new java.util.ArrayList<Card>();
    public boolean playerTurn = false;
    
@@ -392,7 +470,7 @@ class Player extends Thread {
          // wait for another player to arrive
          if ( number != (control.players.length-1) ) {
             output.writeUTF( "Waiting for more players\n" );
-
+            /*
             try {
                synchronized( this ) {   
                   while ( threadSuspended )
@@ -402,10 +480,7 @@ class Player extends Thread {
             catch ( InterruptedException e ) {
                e.printStackTrace();
             }
-
-            output.writeUTF(
-               "Other player connected. Your turn.\n" );
-            
+            */
          }
          
          //RACE CONDITION NEEDS TO BE FIXED
@@ -419,15 +494,20 @@ class Player extends Thread {
          // Play game
          while ( !done ) {
             String message = input.readUTF();
-            
-            if(message.contains("hitme")){
-            	
-            }else if(message.contains("stand")){
-            	
+            if(message.contains("turn: hitme") && control.getCurrentPlayer() == number){
+               control.display("Player " + Integer.toString(number + 1) + " attempting turn when it is Player " + Integer.toString(control.getCurrentPlayer() + 1) + "'s turn\n");
+            	control.playerHit();
+            }else if(message.contains("turn: stand") && control.getCurrentPlayer() == number){
+            	control.playerStood();
             }else if(message.contains("chat:")){
             	message = message.substring(6);
+               control.sendMessageToAllPlayers(message);
             }else if(message.contains("stats:")){
-            	message = message.substring(7);
+               //TODO: do stats, no stats yet
+            	//message = message.substring(7);
+            }
+            else if(message.contains("quit:")) {
+               //TODO: graceful exit
             }
             
 

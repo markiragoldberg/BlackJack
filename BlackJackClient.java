@@ -49,8 +49,6 @@ public class BlackJackClient extends JApplet
    private boolean loggedIn;
    
    //Game logic stuff
-   
-   private boolean myTurn;
    private String[] players;
    
    public void init()
@@ -247,26 +245,24 @@ public class BlackJackClient extends JApplet
    
    public void hitMe()
    {
-      if( myTurn )
-         try {
-            output.writeUTF("turn: hitme");
-            myTurn = false;
-         }
-         catch ( IOException ie ) {
-            ie.printStackTrace();         
-         }
+      chatbox.append("send hit to server\n");
+      try {
+         output.writeUTF("turn: hitme");
+      }
+      catch ( IOException ie ) {
+         ie.printStackTrace();         
+      }
    }
    
    public void stand()
    {
-      if( myTurn )
-         try {
-            output.writeUTF("turn: stand");
-            myTurn = false;
-         }
-         catch ( IOException ie ) {
-            ie.printStackTrace();         
-         }
+      chatbox.append("send stand to server\n");
+      try {
+         output.writeUTF("turn: stand");
+      }
+      catch ( IOException ie ) {
+         ie.printStackTrace();         
+      }
    }
    
    public void chat(String message)
