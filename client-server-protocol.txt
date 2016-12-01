@@ -1,0 +1,5 @@
+CLIENT SAYS
+
+turn: hitme
+turn: stand
+chat: <chat message>
