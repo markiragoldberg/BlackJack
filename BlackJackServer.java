@@ -17,6 +17,7 @@ public class BlackJackServer extends JFrame {
    private int currentPlayer;
    public int deckIndex = 0;
    public int serverHandIndex = 0;
+   public int handValue;
    public java.util.ArrayList<Card> serverHand = new java.util.ArrayList<Card>();
    DeckofCards deck = new DeckofCards();
 
@@ -87,15 +88,24 @@ public class BlackJackServer extends JFrame {
       serverHand.add(deck.cards.get(getDeckIndex()));
       String card = serverHand.get(serverHandIndex).toString();
       display("Server received card: " + card + "\n");
+      sendMessageToOtherPlayer("Server received card: " + card + "\n", 0);
+      sendMessageToOtherPlayer("Server received card: " + card + "\n", 1);
       incrementIndex();
       serverHandIndex += 1;
       
       serverHand.add(deck.cards.get(getDeckIndex()));
       card = serverHand.get(serverHandIndex).toString();
       display("Server received card: " + card + "\n");
+      sendMessageToOtherPlayer("Server received card: " + card + "\n", 0);
+      sendMessageToOtherPlayer("Server received card: " + card + "\n", 1);
       incrementIndex();
       serverHandIndex += 1;
-      
+      sendMessageToOtherPlayer("The servers hand is: " + displayHand() + "\n", 0);
+      sendMessageToOtherPlayer("The servers hand is: " + displayHand() + "\n", 1);
+      getValueOfCard(serverHand.get(serverHandIndex - 2));
+      getValueOfCard(serverHand.get(serverHandIndex - 1));
+      sendMessageToOtherPlayer("The servers hand value is: " + handValue + "\n", 0);
+      sendMessageToOtherPlayer("The servers hand value is: " + handValue + "\n", 1);
       
    }
    
@@ -111,6 +121,39 @@ public class BlackJackServer extends JFrame {
            else {theHand += card.getValue() + ", ";}
 	   }
 	   return theHand;
+   }
+   
+public int getValueOfCard(Card card){
+	   
+	   switch(card.getValue()){
+	   case "2": handValue += 2;
+	   break;
+	   case "3": handValue += 3;
+	   break;
+	   case "4": handValue += 4;
+	   break;
+	   case "5": handValue += 5;
+	   break;
+	   case "6": handValue += 6;
+	   break;
+	   case "7": handValue += 7;
+	   break;
+	   case "8": handValue += 8;
+	   break;
+	   case "9": handValue += 9;
+	   break;
+	   case "10": handValue += 10;
+	   break;
+	   case "A": handValue += 1;
+	   break;
+	   case "Jack": handValue += 10;
+	   break;
+	   case "Queen": handValue += 10;
+	   break;
+	   case "King": handValue += 10;
+	   break;
+	   }
+	   return handValue;
    }
    
    public void display( String s )
@@ -137,7 +180,7 @@ public class BlackJackServer extends JFrame {
 
       if ( !isOccupied( loc ) ) {
          board[ loc ] =
-            (byte) ( currentPlayer == 0 ? 'X' : 'O' );
+            (byte) ( currentPlayer == 0 ? '1' : '2' );
          //Race condition might be solved by using something similar to this code
          currentPlayer = ( currentPlayer + 1 ) % 2;
          players[ currentPlayer ].otherPlayerMoved( loc );
@@ -173,7 +216,7 @@ public class BlackJackServer extends JFrame {
    
    public boolean isOccupied( int loc )
    {
-      if ( board[ loc ] == 'X' || board [ loc ] == 'O' )
+      if ( board[ loc ] == '1' || board [ loc ] == '2' )
           return true;
       else
           return false;
@@ -213,14 +256,14 @@ class Player extends Thread {
    private BlackJackServer control;
    int handValue = 0;
    private int number;
-   private char mark;
+   private String mark;
    protected boolean threadSuspended = true;
    public int playerHandIndex = 0;
    public java.util.ArrayList<Card> hand = new java.util.ArrayList<Card>();
 
    public Player( Socket s, BlackJackServer t, int num )
    {
-      mark = ( num == 0 ? 'X' : 'O' );
+      mark = ( num == 0 ? "1" : "2" );
 
       connection = s;
       
@@ -260,17 +303,16 @@ class Player extends Thread {
      
       try {
          control.display( "Player " +
-            ( number == 0 ? 'X' : 'O' ) + " connected" );
+            ( number == 0 ? '1' : '2' ) + " connected" );
          if(number == 0){
         	 control.display("Waiting for other player to connect...");
          }
-         output.writeChar( mark );
          output.writeUTF( "Player " +
-            ( number == 0 ? "X connected\n" :
-                            "O connected, please wait\n" ) );
+            ( number == 0 ? "1 connected\n" :
+                            "2 connected, please wait\n" ) );
 
          // wait for another player to arrive
-         if ( mark == 'X' ) {
+         if ( mark == "1" ) {
             output.writeUTF( "Waiting for another player\n" );
 
             try {
@@ -314,6 +356,7 @@ class Player extends Thread {
          control.sendMessageToOtherPlayer("The other player received card: " + card + "\n", number);
          control.sendMessageToOtherPlayer("Player " + mark + " hand value is " + Integer.toString(handValue) + "\n", number);
          control.sendMessageToOtherPlayer("Player " + mark + " complete hand is " + displayHand() + "\n", number);
+         
          
          
          // Play game
