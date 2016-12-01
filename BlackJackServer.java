@@ -125,8 +125,8 @@ public class BlackJackServer extends JFrame {
          serverHandIndex += 1;
       }
       
-      sendMessageToAllPlayers("The servers hand is: " + displayHand() + "\n");
-      sendMessageToAllPlayers("The servers hand value is: " + getValueOfHand(serverHand) + "\n");
+      sendMessageToAllPlayers("The server\'s hand is: " + displayHand() + "\n");
+      sendMessageToAllPlayers("The server\'s hand value is: " + getValueOfHand(serverHand) + "\n\n");
       display("The servers hand value is: " + getValueOfHand(serverHand) + "\n");
       
       playersNotDone = new java.util.ArrayList<Integer>();

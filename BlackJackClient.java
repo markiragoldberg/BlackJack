@@ -278,6 +278,7 @@ public class BlackJackClient extends JApplet
                update += c + "\n";
             }
          }
+         update += "\n";
       }
       
       //Server hand
