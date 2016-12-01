@@ -190,8 +190,15 @@ public class BlackJackServer extends JFrame {
          }
          sendMessageToOtherPlayers("Player " + Integer.toString(i+1) + " received cards: " 
                + players[i].hand.get(0) + ", " + players[i].hand.get(1) + "\n", i);
-         display("Player: " + Integer.toString(i+1) + " received card: " + players[i].hand.get(0) + "\n");
-         display("Player: " + Integer.toString(i+1) + " received card: " + players[i].hand.get(1) + "\n");
+         //internal messages to get clients to show new cards, with server as 0 and 1 as 1
+         sendMessageToAllPlayers("newcard: " + Integer.toString(i+1));
+         sendMessageToAllPlayers("newvalue: " + players[i].hand.get(0).getValue());
+         sendMessageToAllPlayers("newsuit: " + players[i].hand.get(0).getSuit());
+         sendMessageToAllPlayers("newcard: " + Integer.toString(i+1));
+         sendMessageToAllPlayers("newvalue: " + players[i].hand.get(1).getValue());
+         sendMessageToAllPlayers("newsuit: " + players[i].hand.get(1).getSuit());
+         display("Player: " + Integer.toString(i+1) + " received card: \n" + players[i].hand.get(0) + "\n");
+         display("Player: " + Integer.toString(i+1) + " received card: \n" + players[i].hand.get(1) + "\n");
          display("Player " + Integer.toString(i+1) + " hand value is " + getValueOfHand(players[i].hand));
          sendMessageToOtherPlayers("Player " + Integer.toString(i+1) + "\'s hand value is " + getValueOfHand(players[i].hand) + "\n\n", i);
          try {
@@ -206,6 +213,11 @@ public class BlackJackServer extends JFrame {
          String card = serverHand.get(serverHandIndex).toString();
          display("Server received card: " + card + "\n");
          sendMessageToAllPlayers("Server received card: " + card + "\n");
+         
+         sendMessageToAllPlayers("newcard: " + Integer.toString(0));
+         sendMessageToAllPlayers("newvalue: " + serverHand.get(serverHandIndex).getValue());
+         sendMessageToAllPlayers("newsuit: " + serverHand.get(serverHandIndex).getSuit());
+         
          incrementIndex();
          serverHandIndex += 1;
       }
@@ -237,12 +249,17 @@ public class BlackJackServer extends JFrame {
       try {
          players[currentPlayer].output.writeUTF( "You have been dealt:\n" );
          players[currentPlayer].output.writeUTF(
-            "Card: " + players[currentPlayer].hand.get(players[currentPlayer].hand.size()-1) + "\n");
+            "Card: \n" + players[currentPlayer].hand.get(players[currentPlayer].hand.size()-1) + "\n");
          players[currentPlayer].output.writeUTF(
             "Your hand value is: " + getValueOfHand(players[currentPlayer].hand) + "\n");
          sendMessageToOtherPlayers(
             "Player " + Integer.toString(currentPlayer+1) + " was dealt the " + 
             players[currentPlayer].hand.get(players[currentPlayer].hand.size()-1) + ".\n" ,currentPlayer);
+            
+         sendMessageToAllPlayers("newcard: " + Integer.toString(currentPlayer + 1));
+         sendMessageToAllPlayers("newvalue: " + players[currentPlayer].hand.get(players[currentPlayer].hand.size()-1).getValue());
+         sendMessageToAllPlayers("newsuit: " + players[currentPlayer].hand.get(players[currentPlayer].hand.size()-1).getSuit());
+            
       } catch (Exception e) {
          e.printStackTrace();
       }
@@ -574,18 +591,7 @@ class Player extends Thread {
 
          // wait for another player to arrive
          if ( number != (control.players.length-1) ) {
-            output.writeUTF( "Waiting for more players\n" );
-            /*
-            try {
-               synchronized( this ) {   
-                  while ( threadSuspended )
-                     wait();  
-               }
-            } 
-            catch ( InterruptedException e ) {
-               e.printStackTrace();
-            }
-            */
+            output.writeUTF( "Waiting for more players\n\n" );
          }
          
          //RACE CONDITION NEEDS TO BE FIXED
