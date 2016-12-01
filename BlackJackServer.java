@@ -7,6 +7,9 @@ import java.net.*;
 import java.io.*;
 import javax.swing.*;
 import java.util.List;
+import java.util.*;
+import java.sql.*;
+import java.util.Vector;
 
 public class BlackJackServer extends JFrame {
    private JTextArea output;
@@ -18,6 +21,15 @@ public class BlackJackServer extends JFrame {
    public java.util.ArrayList<Card> serverHand = new java.util.ArrayList<Card>();
    public java.util.ArrayList<Integer> playersNotDone;
    DeckofCards deck = new DeckofCards();
+   
+   String queryString="Select * from BLACKJACKSTATS";
+   String url="jdbc:oracle:thin:@dbserv.cs.siu.edu:1521:cs";
+   String user="bolson";
+   String passwd="u3jBhtum";
+   String result=new String();
+   
+   
+   
 
    public BlackJackServer()
    {
@@ -43,6 +55,61 @@ public class BlackJackServer extends JFrame {
 
       setSize( 500, 1000 );
       setVisible(true);
+   }
+   
+   public void getResults()
+   {     
+      try 
+      {
+        //Class.forName("oracle.jdbc.driver.OracleDriver").newInstance();  
+        DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver()); 
+        display("Done with driver registrations!");
+      }catch(Exception ex)
+       { 
+    	  display("can't find the driver");
+       }   
+
+     try
+      {
+	     display("Trying to connect to Oracle Database...");
+         Connection con=DriverManager.getConnection(url,user,passwd);
+         display("Connection sucessful to Database");                  
+         Statement stmt=con.createStatement();
+         //stmt.executeQuery(queryString);  /* Query doesn't return results (create a table) */
+
+
+         ResultSet rs=stmt.executeQuery(queryString); /* Query returns result including MetaData  (select a table)  */
+         ResultSetMetaData rsmd=rs.getMetaData();
+	 
+         
+         int numberofcolumn =rsmd.getColumnCount();
+          //System.out.println("number of columns= " + numberofcolumn );
+	   	  while (rs.next()) /*Start to get actual data*/
+          {  
+	    	 for(int i=1;i<=numberofcolumn;i++)
+             {  
+	           String s=rs.getString(i);
+	           if(i==0){
+	        	   result+= s+ "\n";
+	           }else if(i == 1){
+	        	   result+= s+ "\n";
+	           }else if (i == 2) {
+	        	   result+= "Wins: " + s+ "\n";
+	           }else if (i == 3) {
+	        	   result+= "Losses: " + s+ "\n";
+	           } else {
+	        	   result+= "Cash: $" + s+ "\n";
+	           }
+             }
+	    	 result+="\n";
+          }
+          display("\n"+result);   /* */
+         stmt.close();
+         con.close();
+      }catch(SQLException ex)
+       {
+          display("SQLException: "+ex);
+       }   
    }
    
    public synchronized void incrementIndex(){
@@ -75,8 +142,8 @@ public class BlackJackServer extends JFrame {
          e.printStackTrace();
          System.exit(1);
       }
-      
-      
+      display("Fetching player stats...");
+      getResults();
       //Server should deal out the cards here!
       for ( int i = 0; i < players.length; i++ ) {
          players[i].hand.add(deck.cards.get(getDeckIndex()));
@@ -167,7 +234,6 @@ public class BlackJackServer extends JFrame {
             break;
          }
       }
-      
       //Cases to cover:
       //1 player left, player busted
          //ignore currentplayer; endGame
