@@ -335,8 +335,10 @@ class ChatListener extends MouseAdapter {
     }
 
     public void mouseReleased( MouseEvent e ) {
-        applet.chat(chatField.getText());
-        chatField.setText("");
+        if(!chatField.getText().isEmpty()) {
+            applet.chat(chatField.getText());
+            chatField.setText("");
+        }
     }
 }
 
