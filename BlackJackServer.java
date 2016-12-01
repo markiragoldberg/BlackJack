@@ -157,7 +157,9 @@ public class BlackJackServer extends JFrame {
          }
          
          //get next player in queue
-         i = (i + 1) % playersNotDone.size();
+         if(!playersNotDone.isEmpty()) {
+            i = (i + 1) % playersNotDone.size();
+         }
       }
       
       boolean allPlayersBusted = true;
