@@ -67,6 +67,9 @@ public class BlackJackClient extends JApplet
       getContentPane().add(passwordField, BorderLayout.EAST);
       getContentPane().add(loginButton, BorderLayout.SOUTH);
       
+      //TODO implement logging in
+      login("Welcome to BlackJack!");
+      
       setSize(300, 200);
    }
 
@@ -209,9 +212,8 @@ public class BlackJackClient extends JApplet
    // Process messages sent to client
    public void processMessage( String s )
    {
-      System.out.println("process");
+      chatbox.append(s);
       if(s.contains("loggedin: ")) {
-         System.err.println("got login msg");
          if(!SwingUtilities.isEventDispatchThread()) {
             SwingUtilities.invokeLater(new Runnable() {
                public void run() {
