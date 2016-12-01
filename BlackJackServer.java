@@ -57,8 +57,17 @@ public class BlackJackServer extends JFrame {
       setVisible(true);
    }
    
-   public void getResults()
+   public void getResults(String player, int playerNumber)
    {     
+	 
+	   if(player == "1"){
+		   queryString="Select * from BLACKJACKSTATS WHERE PLAYER_NUMBER = 'PLAYER 1'";
+	   }else if(player == "2"){
+		   queryString="Select * from BLACKJACKSTATS WHERE PLAYER_NUMBER = 'PLAYER 2'";
+	   }else if(player == "3"){
+		   queryString="Select * from BLACKJACKSTATS WHERE PLAYER_NUMBER = 'PLAYER 3'";
+	   }else queryString="Select * from BLACKJACKSTATS";
+	   
       try 
       {
         //Class.forName("oracle.jdbc.driver.OracleDriver").newInstance();  
@@ -103,7 +112,28 @@ public class BlackJackServer extends JFrame {
              }
 	    	 result+="\n";
           }
-          display("\n"+result);   /* */
+          display("\n"+result); 
+          
+          if(playerNumber == 4){
+        	  try {
+                  players[0].output.writeUTF("\n"+result);
+                  players[1].output.writeUTF("\n"+result);
+                  players[2].output.writeUTF("\n"+result);
+                  
+               } catch (Exception e) {
+                  e.printStackTrace();
+               }
+          }else {
+          
+          
+          try {
+              players[playerNumber].output.writeUTF("\n"+result);
+              
+           } catch (Exception e) {
+              e.printStackTrace();
+           }
+          }
+          /* */
          stmt.close();
          con.close();
       }catch(SQLException ex)
@@ -143,7 +173,7 @@ public class BlackJackServer extends JFrame {
          System.exit(1);
       }
       display("Fetching player stats...");
-      getResults();
+      getResults("",4);
       //Server should deal out the cards here!
       for ( int i = 0; i < players.length; i++ ) {
          players[i].hand.add(deck.cards.get(getDeckIndex()));
@@ -590,6 +620,9 @@ class Player extends Thread {
             }
             else if(message.contains("quit:")) {
                //TODO: graceful exit
+            }else if(message.contains("stats: ")){
+            	message = message.substring(7);
+            	control.getResults(message, number);
             }
             
 
