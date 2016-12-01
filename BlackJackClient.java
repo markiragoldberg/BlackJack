@@ -157,6 +157,7 @@ public class BlackJackClient extends JApplet
       getContentPane().repaint();
       
       loggedIn = true;
+      //Disable buttons until server tells us to go
    }
 
    // Make connection to server and get associated streams.
@@ -221,15 +222,15 @@ public class BlackJackClient extends JApplet
             login(s.substring(10));
          }
       }
-      if(s.contains("chat: ")) {
+      else if(s.contains("chat: ")) {
          //Remove the "chat: " part and add to the chatbox
          handinfo.append(s.substring(6) + "\n");
       }
-      if(s.contains("stats: ")) {
+      else if(s.contains("stats: ")) {
          //IMO we can just dump stats in the chatbox too
          chatbox.append(s.substring(7));
       }
-      if(s.contains("Your turn")){
+      else if(s.contains("Your turn")){
     	  try {
               Thread.sleep(5000);                 //1000 milliseconds is one second.
               } catch(InterruptedException ex) {
@@ -247,7 +248,6 @@ public class BlackJackClient extends JApplet
    
    public void hitMe()
    {
-      chatbox.append("send hit to server\n");
       try {
          output.writeUTF("turn: hitme");
       }
@@ -258,7 +258,6 @@ public class BlackJackClient extends JApplet
    
    public void stand()
    {
-      chatbox.append("send stand to server\n");
       try {
          output.writeUTF("turn: stand");
       }
