@@ -1,6 +1,3 @@
-// Fig. 21.7: TicTacToeServer.java
-// This class maintains a game of Tic-Tac-Toe for two
-// client applets.
 import java.awt.*;
 import java.awt.event.*;
 import java.net.*;

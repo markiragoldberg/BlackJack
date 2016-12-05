@@ -1,5 +1,3 @@
-// Fig. 21.8: TicTacToeClient.java
-// Client for the TicTacToe program
 import java.awt.*;
 import java.awt.event.*;
 import java.net.*;
